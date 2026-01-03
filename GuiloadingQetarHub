@@ -1,0 +1,165 @@
+-- Qetar Hub Loading Screen
+local ScreenGui = Instance.new("ScreenGui")
+ScreenGui.Name = "QetarHubLoading"
+ScreenGui.ZIndexBehavior = Enum.ZIndexBehavior.Sibling
+ScreenGui.ResetOnSpawn = false
+ScreenGui.DisplayOrder = 999999999
+ScreenGui.IgnoreGuiInset = true
+ScreenGui.Parent = game:GetService("CoreGui")
+
+-- GUI ĐEN TO 999999999
+local Background = Instance.new("Frame")
+Background.Name = "Background"
+Background.Size = UDim2.new(1, 0, 1, 0)
+Background.Position = UDim2.new(0, 0, 0, 0)
+Background.BackgroundColor3 = Color3.fromRGB(0, 0, 0)
+Background.BorderSizePixel = 0
+Background.ZIndex = 999999999
+Background.Parent = ScreenGui
+
+-- Chặn tất cả input
+Background.InputBegan:Connect(function() end)
+Background.InputEnded:Connect(function() end)
+
+-- Chữ QETAR HUB - KHÔNG CHUYỂN ĐỘNG
+local Logo = Instance.new("TextLabel")
+Logo.Name = "Logo"
+Logo.Size = UDim2.new(0, 800, 0, 150)
+Logo.Position = UDim2.new(0.5, -400, 0.35, -75)
+Logo.BackgroundTransparency = 1
+Logo.Text = "QETAR HUB"
+Logo.TextColor3 = Color3.fromRGB(255, 255, 255)
+Logo.TextSize = 100
+Logo.Font = Enum.Font.Code
+Logo.TextStrokeTransparency = 0.3
+Logo.TextStrokeColor3 = Color3.fromRGB(0, 170, 255)
+Logo.ZIndex = 999999999 + 1
+Logo.Parent = Background
+
+local LoadingText = Instance.new("TextLabel")
+LoadingText.Name = "LoadingText"
+LoadingText.Size = UDim2.new(0, 600, 0, 70)
+LoadingText.Position = UDim2.new(0.5, -300, 0.5, 0)
+LoadingText.BackgroundTransparency = 1
+LoadingText.Text = "Loading : 0%"
+LoadingText.TextColor3 = Color3.fromRGB(255, 255, 255)
+LoadingText.TextSize = 50
+LoadingText.Font = Enum.Font.Code
+LoadingText.ZIndex = 999999999 + 1
+LoadingText.Parent = Background
+
+local StatusText = Instance.new("TextLabel")
+StatusText.Name = "StatusText"
+StatusText.Size = UDim2.new(0, 800, 0, 40)
+StatusText.Position = UDim2.new(0.5, -400, 0.6, 0)
+StatusText.BackgroundTransparency = 1
+StatusText.Text = ""
+StatusText.TextColor3 = Color3.fromRGB(0, 255, 150)
+StatusText.TextSize = 30
+StatusText.Font = Enum.Font.Code
+StatusText.ZIndex = 999999999 + 1
+StatusText.Parent = Background
+
+local TweenService = game:GetService("TweenService")
+local progress = 0
+local duration = 10
+
+local bypassMessages = {
+    {progress = 5, text = "Bypassing Anti-Cheat..."},
+    {progress = 12, text = "Injecting Core Modules..."},
+    {progress = 20, text = "Hooking Game Functions..."},
+    {progress = 28, text = "Bypassing Kick Detection..."},
+    {progress = 35, text = "Spoofing Client Data..."},
+    {progress = 43, text = "Patching Security Checks..."},
+    {progress = 51, text = "Loading Script Environment..."},
+    {progress = 60, text = "Initializing Executor Core..."},
+    {progress = 68, text = "Bypassing Remote Filters..."},
+    {progress = 75, text = "Injecting UI Framework..."},
+    {progress = 82, text = "Securing Connection..."},
+    {progress = 90, text = "Finalizing Injection..."},
+    {progress = 97, text = "Almost Done..."},
+}
+
+local currentMessageIndex = 1
+
+task.spawn(function()
+    local startTime = tick()
+    local endTime = startTime + duration
+    
+    while tick() < endTime do
+        local elapsed = tick() - startTime
+        progress = math.floor((elapsed / duration) * 100)
+        
+        if progress > 100 then
+            progress = 100
+        end
+        
+        LoadingText.Text = "Loading : " .. progress .. "%"
+        
+        if currentMessageIndex <= #bypassMessages then
+            if progress >= bypassMessages[currentMessageIndex].progress then
+                StatusText.Text = bypassMessages[currentMessageIndex].text
+                currentMessageIndex = currentMessageIndex + 1
+            end
+        end
+        
+        task.wait(0.1)
+    end
+    
+    LoadingText.Text = "Loading : 100%"
+    StatusText.Text = "Injection Complete!"
+    
+    task.wait(0.5)
+    
+    -- HIỆU ỨNG KHÚC CUỐI: CÁC HIỆU ỨNG XẢY R
+    -- 2. Hiệu ứng logo phóng to và mờ dần
+    local logoZoom = TweenService:Create(Logo, TweenInfo.new(0.8, Enum.EasingStyle.Back, Enum.EasingDirection.Out), {
+        TextSize = 120,
+        TextTransparency = 0.8,
+        TextStrokeTransparency = 0.8
+    })
+    
+    -- 3. Hiệu ứng loading text biến mất
+    local loadingFade = TweenService:Create(LoadingText, TweenInfo.new(0.6, Enum.EasingStyle.Quad), {
+        TextTransparency = 1
+    })
+    
+    -- 4. Hiệu ứng status text chuyển màu và phóng to
+    local statusPulse = TweenService:Create(StatusText, TweenInfo.new(0.5, Enum.EasingStyle.Sine, Enum.EasingDirection.InOut, 0, true), {
+        TextColor3 = Color3.fromRGB(0, 255, 0),
+        TextSize = 35
+    })
+    
+    -- Chạy các hiệu ứng cùng lúc
+    logoZoom:Play()
+    loadingFade:Play()
+    statusPulse:Play()
+    
+    task.wait(0.8)
+    
+    -- 5. Hiệu ứng background fade out
+    local backgroundFade = TweenService:Create(Background, TweenInfo.new(0.5, Enum.EasingStyle.Quad), {
+        BackgroundTransparency = 1
+    })
+    
+    -- 6. Hiệu ứng tất cả text biến mất
+    local logoFinalFade = TweenService:Create(Logo, TweenInfo.new(0.5, Enum.EasingStyle.Quad), {
+        TextTransparency = 1,
+        TextStrokeTransparency = 1
+    })
+    
+    local statusFinalFade = TweenService:Create(StatusText, TweenInfo.new(0.5, Enum.EasingStyle.Quad), {
+        TextTransparency = 1
+    })
+    
+    -- Chạy hiệu ứng cuối
+    backgroundFade:Play()
+    logoFinalFade:Play()
+    statusFinalFade:Play()
+    
+    backgroundFade.Completed:Wait()
+    
+    -- Xóa GUI sau khi hiệu ứng kết thúc
+    ScreenGui:Destroy()
+    print("Qetar Hub loaded successfully!")
+end)
