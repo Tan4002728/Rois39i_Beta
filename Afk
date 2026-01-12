@@ -1,0 +1,1778 @@
+local Players = game:GetService("Players")
+local UserInputService = game:GetService("UserInputService")
+local RunService = game:GetService("RunService")
+local TweenService = game:GetService("TweenService")
+local VirtualUser = game:GetService('VirtualUser')
+
+local Player = Players.LocalPlayer
+local AFKEnabled = false
+local MaxAFKTime = 180
+local LastActivity = os.time()
+local Moving = false
+local AFKConnection
+local CurrentMethod = "Hybrid"
+local InfoVisible = false
+
+local ScreenGui = Instance.new("ScreenGui")
+ScreenGui.Name = "AntiAFKGui"
+ScreenGui.ZIndexBehavior = Enum.ZIndexBehavior.Sibling
+ScreenGui.DisplayOrder = 999
+ScreenGui.ResetOnSpawn = false
+ScreenGui.Parent = Player:WaitForChild("PlayerGui")
+
+local MainFrame = Instance.new("Frame")
+MainFrame.Name = "MainFrame"
+MainFrame.Size = UDim2.new(0, 350, 0, 220)
+MainFrame.Position = UDim2.new(0.5, -175, 0.5, -110)
+MainFrame.BackgroundColor3 = Color3.fromRGB(30, 30, 40)
+MainFrame.BackgroundTransparency = 0.1
+MainFrame.BorderSizePixel = 0
+MainFrame.ClipsDescendants = true
+
+local UICorner = Instance.new("UICorner")
+UICorner.CornerRadius = UDim.new(0, 10)
+UICorner.Parent = MainFrame
+
+local UIStroke = Instance.new("UIStroke")
+UIStroke.Color = Color3.fromRGB(70, 130, 200)
+UIStroke.Thickness = 2
+UIStroke.Parent = MainFrame
+
+local TitleFrame = Instance.new("Frame")
+TitleFrame.Name = "TitleFrame"
+TitleFrame.Size = UDim2.new(1, 0, 0, 40)
+TitleFrame.BackgroundColor3 = Color3.fromRGB(40, 40, 55)
+TitleFrame.BorderSizePixel = 0
+TitleFrame.Parent = MainFrame
+
+local TitleCorner = Instance.new("UICorner")
+TitleCorner.CornerRadius = UDim.new(0, 10)
+TitleCorner.Parent = TitleFrame
+
+local Title = Instance.new("TextLabel")
+Title.Name = "Title"
+Title.Size = UDim2.new(1, -80, 1, 0)
+Title.Position = UDim2.new(0, 10, 0, 0)
+Title.BackgroundTransparency = 1
+Title.Text = "ANTI-AFK"
+Title.TextColor3 = Color3.fromRGB(255, 255, 255)
+Title.TextSize = 18
+Title.Font = Enum.Font.GothamBold
+Title.TextXAlignment = Enum.TextXAlignment.Left
+Title.Parent = TitleFrame
+
+local CloseButton = Instance.new("TextButton")
+CloseButton.Name = "CloseButton"
+CloseButton.Size = UDim2.new(0, 25, 0, 25)
+CloseButton.Position = UDim2.new(1, -30, 0, 7)
+CloseButton.BackgroundColor3 = Color3.fromRGB(50, 50, 70)
+CloseButton.BorderSizePixel = 0
+CloseButton.Text = "×"
+CloseButton.TextColor3 = Color3.fromRGB(255, 255, 255)
+CloseButton.TextSize = 16
+CloseButton.Font = Enum.Font.GothamBold
+CloseButton.Parent = TitleFrame
+
+local CloseCorner = Instance.new("UICorner")
+CloseCorner.CornerRadius = UDim.new(0, 6)
+CloseCorner.Parent = CloseButton
+
+local MiniInfoButton = Instance.new("TextButton")
+MiniInfoButton.Name = "MiniInfoButton"
+MiniInfoButton.Size = UDim2.new(0, 25, 0, 25)
+MiniInfoButton.Position = UDim2.new(1, -60, 0, 7)
+MiniInfoButton.BackgroundColor3 = Color3.fromRGB(70, 130, 200)
+MiniInfoButton.BorderSizePixel = 0
+MiniInfoButton.Text = "?"
+MiniInfoButton.TextColor3 = Color3.fromRGB(255, 255, 255)
+MiniInfoButton.TextSize = 14
+MiniInfoButton.Font = Enum.Font.GothamBold
+MiniInfoButton.Parent = TitleFrame
+
+local MiniInfoCorner = Instance.new("UICorner")
+MiniInfoCorner.CornerRadius = UDim.new(0, 6)
+MiniInfoCorner.Parent = MiniInfoButton
+
+local ContentFrame = Instance.new("Frame")
+ContentFrame.Name = "ContentFrame"
+ContentFrame.Size = UDim2.new(1, -20, 1, -50)
+ContentFrame.Position = UDim2.new(0, 10, 0, 50)
+ContentFrame.BackgroundTransparency = 1
+ContentFrame.Parent = MainFrame
+
+local StatusFrame = Instance.new("Frame")
+StatusFrame.Name = "StatusFrame"
+StatusFrame.Size = UDim2.new(1, 0, 0, 40)
+StatusFrame.BackgroundColor3 = Color3.fromRGB(40, 40, 55)
+StatusFrame.BorderSizePixel = 0
+StatusFrame.Parent = ContentFrame
+
+local StatusCorner = Instance.new("UICorner")
+StatusCorner.CornerRadius = UDim.new(0, 8)
+StatusCorner.Parent = StatusFrame
+
+local StatusIndicator = Instance.new("Frame")
+StatusIndicator.Name = "StatusIndicator"
+StatusIndicator.Size = UDim2.new(0, 12, 0, 12)
+StatusIndicator.Position = UDim2.new(0, 10, 0.5, -6)
+StatusIndicator.BackgroundColor3 = Color3.fromRGB(220, 60, 60)
+StatusIndicator.BorderSizePixel = 0
+StatusIndicator.Parent = StatusFrame
+
+local StatusCorner2 = Instance.new("UICorner")
+StatusCorner2.CornerRadius = UDim.new(1, 0)
+StatusCorner2.Parent = StatusIndicator
+
+local StatusText = Instance.new("TextLabel")
+StatusText.Name = "StatusText"
+StatusText.Size = UDim2.new(1, -40, 1, 0)
+StatusText.Position = UDim2.new(0, 30, 0, 0)
+StatusText.BackgroundTransparency = 1
+StatusText.Text = "TRẠNG THÁI: TẮT"
+StatusText.TextColor3 = Color3.fromRGB(255, 255, 255)
+StatusText.TextSize = 14
+StatusText.Font = Enum.Font.GothamBold
+StatusText.TextXAlignment = Enum.TextXAlignment.Left
+StatusText.Parent = StatusFrame
+
+local ToggleButton = Instance.new("TextButton")
+ToggleButton.Name = "ToggleButton"
+ToggleButton.Size = UDim2.new(1, 0, 0, 35)
+ToggleButton.Position = UDim2.new(0, 0, 0, 50)
+ToggleButton.BackgroundColor3 = Color3.fromRGB(70, 130, 200)
+ToggleButton.BorderSizePixel = 0
+ToggleButton.Text = "▶ BẬT ANTI-AFK"
+ToggleButton.TextColor3 = Color3.fromRGB(255, 255, 255)
+ToggleButton.TextSize = 14
+ToggleButton.Font = Enum.Font.GothamBold
+ToggleButton.Parent = ContentFrame
+
+local ToggleCorner = Instance.new("UICorner")
+ToggleCorner.CornerRadius = UDim.new(0, 8)
+ToggleCorner.Parent = ToggleButton
+
+local MethodFrame = Instance.new("Frame")
+MethodFrame.Name = "MethodFrame"
+MethodFrame.Size = UDim2.new(1, 0, 0, 60)
+MethodFrame.Position = UDim2.new(0, 0, 0, 95)
+MethodFrame.BackgroundColor3 = Color3.fromRGB(40, 40, 55)
+MethodFrame.BorderSizePixel = 0
+MethodFrame.Parent = ContentFrame
+
+local MethodCorner = Instance.new("UICorner")
+MethodCorner.CornerRadius = UDim.new(0, 8)
+MethodCorner.Parent = MethodFrame
+
+local MethodTitle = Instance.new("TextLabel")
+MethodTitle.Name = "MethodTitle"
+MethodTitle.Size = UDim2.new(1, -20, 0, 20)
+MethodTitle.Position = UDim2.new(0, 10, 0, 5)
+MethodTitle.BackgroundTransparency = 1
+MethodTitle.Text = "PHƯƠNG PHÁP"
+MethodTitle.TextColor3 = Color3.fromRGB(200, 200, 220)
+MethodTitle.TextSize = 12
+MethodTitle.Font = Enum.Font.GothamBold
+MethodTitle.TextXAlignment = Enum.TextXAlignment.Left
+MethodTitle.Parent = MethodFrame
+
+local HybridButton = Instance.new("TextButton")
+HybridButton.Name = "HybridButton"
+HybridButton.Size = UDim2.new(0.32, -5, 0, 20)
+HybridButton.Position = UDim2.new(0, 10, 0, 30)
+HybridButton.BackgroundColor3 = Color3.fromRGB(70, 130, 200)
+HybridButton.BorderSizePixel = 0
+HybridButton.Text = "Hybrid"
+HybridButton.TextColor3 = Color3.fromRGB(255, 255, 255)
+HybridButton.TextSize = 11
+HybridButton.Font = Enum.Font.GothamBold
+HybridButton.Parent = MethodFrame
+
+local HybridCorner = Instance.new("UICorner")
+HybridCorner.CornerRadius = UDim.new(0, 4)
+HybridCorner.Parent = HybridButton
+
+local NewMethodButton = Instance.new("TextButton")
+NewMethodButton.Name = "NewMethodButton"
+NewMethodButton.Size = UDim2.new(0.32, -5, 0, 20)
+NewMethodButton.Position = UDim2.new(0.34, 5, 0, 30)
+NewMethodButton.BackgroundColor3 = Color3.fromRGB(50, 50, 70)
+NewMethodButton.BorderSizePixel = 0
+NewMethodButton.Text = "Mới"
+NewMethodButton.TextColor3 = Color3.fromRGB(220, 220, 240)
+NewMethodButton.TextSize = 11
+NewMethodButton.Font = Enum.Font.GothamBold
+NewMethodButton.Parent = MethodFrame
+
+local NewMethodCorner = Instance.new("UICorner")
+NewMethodCorner.CornerRadius = UDim.new(0, 4)
+NewMethodCorner.Parent = NewMethodButton
+
+local OldMethodButton = Instance.new("TextButton")
+OldMethodButton.Name = "OldMethodButton"
+OldMethodButton.Size = UDim2.new(0.32, -5, 0, 20)
+OldMethodButton.Position = UDim2.new(0.68, 0, 0, 30)
+OldMethodButton.BackgroundColor3 = Color3.fromRGB(50, 50, 70)
+OldMethodButton.BorderSizePixel = 0
+OldMethodButton.Text = "Cũ"
+OldMethodButton.TextColor3 = Color3.fromRGB(220, 220, 240)
+OldMethodButton.TextSize = 11
+OldMethodButton.Font = Enum.Font.GothamBold
+OldMethodButton.Parent = MethodFrame
+
+local OldMethodCorner = Instance.new("UICorner")
+OldMethodCorner.CornerRadius = UDim.new(0, 4)
+OldMethodCorner.Parent = OldMethodButton
+
+local TimeFrame = Instance.new("Frame")
+TimeFrame.Name = "TimeFrame"
+TimeFrame.Size = UDim2.new(1, 0, 0, 60)
+TimeFrame.Position = UDim2.new(0, 0, 0, 165)
+TimeFrame.BackgroundColor3 = Color3.fromRGB(40, 40, 55)
+TimeFrame.BorderSizePixel = 0
+TimeFrame.Parent = ContentFrame
+
+local TimeCorner = Instance.new("UICorner")
+TimeCorner.CornerRadius = UDim.new(0, 8)
+TimeCorner.Parent = TimeFrame
+
+local TimeTitle = Instance.new("TextLabel")
+TimeTitle.Name = "TimeTitle"
+TimeTitle.Size = UDim2.new(1, -20, 0, 20)
+TimeTitle.Position = UDim2.new(0, 10, 0, 5)
+TimeTitle.BackgroundTransparency = 1
+TimeTitle.Text = "THỜI GIAN CHỜ (giây)"
+TimeTitle.TextColor3 = Color3.fromRGB(200, 200, 220)
+TimeTitle.TextSize = 12
+TimeTitle.Font = Enum.Font.GothamBold
+TimeTitle.TextXAlignment = Enum.TextXAlignment.Left
+TimeTitle.Parent = TimeFrame
+
+local TimeInput = Instance.new("TextBox")
+TimeInput.Name = "TimeInput"
+TimeInput.Size = UDim2.new(0.4, -10, 0, 25)
+TimeInput.Position = UDim2.new(0.55, 5, 0, 10)
+TimeInput.BackgroundColor3 = Color3.fromRGB(50, 50, 70)
+TimeInput.BorderSizePixel = 0
+TimeInput.Text = tostring(MaxAFKTime)
+TimeInput.TextColor3 = Color3.fromRGB(255, 255, 255)
+TimeInput.TextSize = 13
+TimeInput.Font = Enum.Font.GothamBold
+TimeInput.PlaceholderText = "Giây"
+TimeInput.PlaceholderColor3 = Color3.fromRGB(150, 150, 150)
+TimeInput.TextScaled = false
+TimeInput.ClipsDescendants = true
+TimeInput.Parent = TimeFrame
+
+local InputCorner = Instance.new("UICorner")
+InputCorner.CornerRadius = UDim.new(0, 4)
+InputCorner.Parent = TimeInput
+
+local TimeLabel = Instance.new("TextLabel")
+TimeLabel.Name = "TimeLabel"
+TimeLabel.Size = UDim2.new(0.5, -20, 0, 25)
+TimeLabel.Position = UDim2.new(0, 10, 0, 10)
+TimeLabel.BackgroundTransparency = 1
+TimeLabel.Text = "Kích hoạt sau:"
+TimeLabel.TextColor3 = Color3.fromRGB(220, 220, 240)
+TimeLabel.TextSize = 12
+TimeLabel.Font = Enum.Font.Gotham
+TimeLabel.TextXAlignment = Enum.TextXAlignment.Left
+TimeLabel.Parent = TimeFrame
+
+local TimeRangeLabel = Instance.new("TextLabel")
+TimeRangeLabel.Name = "TimeRangeLabel"
+TimeRangeLabel.Size = UDim2.new(1, -20, 0, 15)
+TimeRangeLabel.Position = UDim2.new(0, 10, 0, 40)
+TimeRangeLabel.BackgroundTransparency = 1
+TimeRangeLabel.Text = "30s - 600s (30s đến 10 phút)"
+TimeRangeLabel.TextColor3 = Color3.fromRGB(180, 180, 220)
+TimeRangeLabel.TextSize = 10
+TimeRangeLabel.Font = Enum.Font.Gotham
+TimeRangeLabel.TextXAlignment = Enum.TextXAlignment.Left
+TimeRangeLabel.Parent = TimeFrame
+
+local InfoPopup = Instance.new("Frame")
+InfoPopup.Name = "InfoPopup"
+InfoPopup.Size = UDim2.new(0, 350, 0, 320)
+InfoPopup.Position = UDim2.new(0.5, -175, 0.5, -160)
+InfoPopup.BackgroundColor3 = Color3.fromRGB(30, 30, 40)
+InfoPopup.BackgroundTransparency = 0.1
+InfoPopup.BorderSizePixel = 0
+InfoPopup.ClipsDescendants = true
+InfoPopup.Visible = false
+InfoPopup.ZIndex = 100
+InfoPopup.Parent = ScreenGui
+
+local InfoPopupCorner = Instance.new("UICorner")
+InfoPopupCorner.CornerRadius = UDim.new(0, 10)
+InfoPopupCorner.Parent = InfoPopup
+
+local InfoPopupStroke = Instance.new("UIStroke")
+InfoPopupStroke.Color = Color3.fromRGB(70, 130, 200)
+InfoPopupStroke.Thickness = 2
+InfoPopupStroke.Parent = InfoPopup
+
+local InfoPopupTitleFrame = Instance.new("Frame")
+InfoPopupTitleFrame.Name = "InfoPopupTitleFrame"
+InfoPopupTitleFrame.Size = UDim2.new(1, 0, 0, 40)
+InfoPopupTitleFrame.BackgroundTransparency = 1
+InfoPopupTitleFrame.ZIndex = 101
+InfoPopupTitleFrame.Parent = InfoPopup
+
+local InfoPopupTitle = Instance.new("TextLabel")
+InfoPopupTitle.Name = "InfoPopupTitle"
+InfoPopupTitle.Size = UDim2.new(1, -40, 1, 0)
+InfoPopupTitle.Position = UDim2.new(0, 10, 0, 0)
+InfoPopupTitle.BackgroundTransparency = 1
+InfoPopupTitle.Text = "📚 THÔNG TIN"
+InfoPopupTitle.TextColor3 = Color3.fromRGB(255, 255, 255)
+InfoPopupTitle.TextSize = 16
+InfoPopupTitle.Font = Enum.Font.GothamBold
+InfoPopupTitle.TextXAlignment = Enum.TextXAlignment.Left
+InfoPopupTitle.ZIndex = 101
+InfoPopupTitle.Parent = InfoPopupTitleFrame
+
+local InfoPopupClose = Instance.new("TextButton")
+InfoPopupClose.Name = "InfoPopupClose"
+InfoPopupClose.Size = UDim2.new(0, 25, 0, 25)
+InfoPopupClose.Position = UDim2.new(1, -30, 0, 7)
+InfoPopupClose.BackgroundColor3 = Color3.fromRGB(50, 50, 70)
+InfoPopupClose.BorderSizePixel = 0
+InfoPopupClose.Text = "×"
+InfoPopupClose.TextColor3 = Color3.fromRGB(255, 255, 255)
+InfoPopupClose.TextSize = 16
+InfoPopupClose.Font = Enum.Font.GothamBold
+InfoPopupClose.ZIndex = 101
+InfoPopupClose.Parent = InfoPopupTitleFrame
+
+local InfoPopupCloseCorner = Instance.new("UICorner")
+InfoPopupCloseCorner.CornerRadius = UDim.new(0, 6)
+InfoPopupCloseCorner.Parent = InfoPopupClose
+
+local InfoPopupContent = Instance.new("ScrollingFrame")
+InfoPopupContent.Name = "InfoPopupContent"
+InfoPopupContent.Size = UDim2.new(1, -20, 1, -50)
+InfoPopupContent.Position = UDim2.new(0, 10, 0, 50)
+InfoPopupContent.BackgroundTransparency = 1
+InfoPopupContent.BorderSizePixel = 0
+InfoPopupContent.ScrollBarThickness = 6
+InfoPopupContent.ZIndex = 101
+InfoPopupContent.Parent = InfoPopup
+
+local InfoPopupLayout = Instance.new("UIListLayout")
+InfoPopupLayout.Padding = UDim.new(0, 8)
+InfoPopupLayout.Parent = InfoPopupContent
+
+local function HybridMethod()
+	VirtualUser:CaptureController()
+	VirtualUser:ClickButton2(Vector2.new())
+	
+	local character = Player.Character
+	if character and character:FindFirstChild("Humanoid") then
+		character.Humanoid.Jump = true
+		
+		local randomDirection = Vector3.new(
+			math.random(-1, 1),
+			0,
+			math.random(-1, 1)
+		).Unit
+		
+		spawn(function()
+			character.Humanoid:Move(randomDirection)
+			wait(0.5)
+			character.Humanoid:Move(Vector3.zero)
+		end)
+	end
+end
+
+local function NewMethod()
+	local character = Player.Character
+	if character and character:FindFirstChild("Humanoid") then
+		character.Humanoid.Jump = true
+		
+		local randomDirection = Vector3.new(
+			math.random(-1, 1),
+			0,
+			math.random(-1, 1)
+		).Unit
+		
+		spawn(function()
+			character.Humanoid:Move(randomDirection)
+			wait(1)
+			character.Humanoid:Move(Vector3.zero)
+		end)
+	end
+end
+
+local function OldMethod()
+	VirtualUser:CaptureController()
+	VirtualUser:ClickButton2(Vector2.new())
+end
+
+local function SelectMethod(method)
+	CurrentMethod = method
+	
+	HybridButton.BackgroundColor3 = Color3.fromRGB(50, 50, 70)
+	NewMethodButton.BackgroundColor3 = Color3.fromRGB(50, 50, 70)
+	OldMethodButton.BackgroundColor3 = Color3.fromRGB(50, 50, 70)
+	
+	HybridButton.TextColor3 = Color3.fromRGB(220, 220, 240)
+	NewMethodButton.TextColor3 = Color3.fromRGB(220, 220, 240)
+	OldMethodButton.TextColor3 = Color3.fromRGB(220, 220, 240)
+	
+	if method == "Hybrid" then
+		HybridButton.BackgroundColor3 = Color3.fromRGB(70, 130, 200)
+		HybridButton.TextColor3 = Color3.fromRGB(255, 255, 255)
+	elseif method == "New" then
+		NewMethodButton.BackgroundColor3 = Color3.fromRGB(70, 200, 130)
+		NewMethodButton.TextColor3 = Color3.fromRGB(255, 255, 255)
+	elseif method == "Old" then
+		OldMethodButton.BackgroundColor3 = Color3.fromRGB(200, 130, 70)
+		OldMethodButton.TextColor3 = Color3.fromRGB(255, 255, 255)
+	end
+	
+	print("Đã chọn phương pháp: " .. method)
+end
+
+local function ToggleAntiAFK()
+	AFKEnabled = not AFKEnabled
+	
+	if AFKEnabled then
+		StatusIndicator.BackgroundColor3 = Color3.fromRGB(70, 200, 130)
+		StatusText.Text = "TRẠNG THÁI: BẬT"
+		ToggleButton.Text = "⏸ TẮT ANTI-AFK"
+		ToggleButton.BackgroundColor3 = Color3.fromRGB(220, 70, 70)
+		
+		LastActivity = os.time()
+		
+		if AFKConnection then
+			AFKConnection:Disconnect()
+		end
+		
+		AFKConnection = RunService.Heartbeat:Connect(function(deltaTime)
+			local currentTime = os.time()
+			
+			if UserInputService:GetMouseDelta().Magnitude > 0 then
+				LastActivity = currentTime
+				Moving = false
+			end
+			
+			local AFKTime = currentTime - LastActivity
+			
+			if AFKTime >= MaxAFKTime then
+				if not Moving then
+					Moving = true
+					
+					if CurrentMethod == "Hybrid" then
+						HybridMethod()
+					elseif CurrentMethod == "New" then
+						NewMethod()
+					elseif CurrentMethod == "Old" then
+						OldMethod()
+					end
+					
+					LastActivity = os.time()
+					print("Đã kích hoạt chống AFK: " .. CurrentMethod)
+				end
+			else
+				Moving = false
+			end
+		end)
+		
+	else
+		StatusIndicator.BackgroundColor3 = Color3.fromRGB(220, 60, 60)
+		StatusText.Text = "TRẠNG THÁI: TẮT"
+		ToggleButton.Text = "▶ BẬT ANTI-AFK"
+		ToggleButton.BackgroundColor3 = Color3.fromRGB(70, 130, 200)
+		
+		if AFKConnection then
+			AFKConnection:Disconnect()
+			AFKConnection = nil
+		end
+		
+		print("Đã tắt hệ thống chống AFK")
+	end
+end
+
+local function UpdateMaxTime(newTime)
+	MaxAFKTime = math.clamp(newTime, 30, 600)
+	TimeInput.Text = tostring(MaxAFKTime)
+end
+
+local function SetupDragging(frame, dragFrame)
+	local dragging = false
+	local dragInput
+	local dragStart
+	local startPos
+	
+	local function update(input)
+		local delta = input.Position - dragStart
+		frame.Position = UDim2.new(startPos.X.Scale, startPos.X.Offset + delta.X, startPos.Y.Scale, startPos.Y.Offset + delta.Y)
+	end
+	
+	dragFrame.InputBegan:Connect(function(input)
+		if input.UserInputType == Enum.UserInputType.MouseButton1 or input.UserInputType == Enum.UserInputType.Touch then
+			dragging = true
+			dragStart = input.Position
+			startPos = frame.Position
+			
+			input.Changed:Connect(function()
+				if input.UserInputState == Enum.UserInputState.End then
+					dragging = false
+				end
+			end)
+		end
+	end)
+	
+	dragFrame.InputChanged:Connect(function(input)
+		if input.UserInputType == Enum.UserInputType.MouseMovement or input.UserInputType == Enum.UserInputType.Touch then
+			dragInput = input
+		end
+	end)
+	
+	UserInputService.InputChanged:Connect(function(input)
+		if input == dragInput and dragging then
+			update(input)
+		end
+	end)
+end
+
+local function CreateInfoSection(title, content, color)
+	local sectionFrame = Instance.new("Frame")
+	sectionFrame.Name = title .. "Section"
+	sectionFrame.Size = UDim2.new(1, 0, 0, 0)
+	sectionFrame.BackgroundColor3 = Color3.fromRGB(40, 40, 55)
+	sectionFrame.BorderSizePixel = 0
+	sectionFrame.BackgroundTransparency = 0
+	sectionFrame.ZIndex = 101
+	
+	local sectionCorner = Instance.new("UICorner")
+	sectionCorner.CornerRadius = UDim.new(0, 6)
+	sectionCorner.Parent = sectionFrame
+	
+	local sectionTitle = Instance.new("TextLabel")
+	sectionTitle.Name = "SectionTitle"
+	sectionTitle.Size = UDim2.new(1, -20, 0, 25)
+	sectionTitle.Position = UDim2.new(0, 10, 0, 0)
+	sectionTitle.BackgroundTransparency = 1
+	sectionTitle.Text = "🔹 " .. title
+	sectionTitle.TextColor3 = color
+	sectionTitle.TextSize = 14
+	sectionTitle.Font = Enum.Font.GothamBold
+	sectionTitle.TextXAlignment = Enum.TextXAlignment.Left
+	sectionTitle.ZIndex = 102
+	sectionTitle.Parent = sectionFrame
+	
+	local sectionContent = Instance.new("TextLabel")
+	sectionContent.Name = "SectionContent"
+	sectionContent.Size = UDim2.new(1, -20, 0, 0)
+	sectionContent.Position = UDim2.new(0, 10, 0, 30)
+	sectionContent.BackgroundTransparency = 1
+	sectionContent.Text = content
+	sectionContent.TextColor3 = Color3.fromRGB(220, 220, 240)
+	sectionContent.TextSize = 12
+	sectionContent.Font = Enum.Font.Gotham
+	sectionContent.TextXAlignment = Enum.TextXAlignment.Left
+	sectionContent.TextYAlignment = Enum.TextYAlignment.Top
+	sectionContent.TextWrapped = true
+	sectionContent.ZIndex = 102
+	sectionContent.Parent = sectionFrame
+	
+	local function updateSize()
+		local textHeight = sectionContent.TextBounds.Y
+		sectionContent.Size = UDim2.new(1, -20, 0, textHeight)
+		sectionFrame.Size = UDim2.new(1, 0, 0, textHeight + 40)
+	end
+	
+	sectionContent:GetPropertyChangedSignal("TextBounds"):Connect(updateSize)
+	updateSize()
+	
+	return sectionFrame
+end
+
+local function ShowInfoPopup()
+	if InfoVisible then return end
+	
+	InfoVisible = true
+	InfoPopup.Visible = true
+	MainFrame.Visible = false
+	
+	while #InfoPopupContent:GetChildren() > 1 do
+		InfoPopupContent:GetChildren()[#InfoPopupContent:GetChildren()]:Destroy()
+	end
+	
+	local hybridInfo = CreateInfoSection(
+		"HYBRID",
+		"• Kết hợp cả hai phương pháp\n• Click chuột ảo + Di chuyển nhân vật\n• An toàn nhất, hiệu quả 99%\n• Dùng khi chơi game thông thường",
+		Color3.fromRGB(70, 130, 200)
+	)
+	hybridInfo.Parent = InfoPopupContent
+	
+	local newInfo = CreateInfoSection(
+		"MỚI",
+		"• Chỉ di chuyển nhân vật\n• Nhảy + di chuyển ngẫu nhiên\n• Ít bị anti-cheat phát hiện\n• Dùng khi game có anti-cheat mạnh",
+		Color3.fromRGB(70, 200, 130)
+	)
+	newInfo.Parent = InfoPopupContent
+	
+	local oldInfo = CreateInfoSection(
+		"CŨ",
+		"• Chỉ click chuột ảo\n• VirtualUser:ClickButton2()\n• Hiệu quả 100% với Roblox\n• Dễ bị anti-cheat phát hiện",
+		Color3.fromRGB(200, 130, 70)
+	)
+	oldInfo.Parent = InfoPopupContent
+	
+	local totalHeight = 0
+	for _, child in pairs(InfoPopupContent:GetChildren()) do
+		if child:IsA("Frame") then
+			totalHeight = totalHeight + child.Size.Y.Offset + 8
+		end
+	end
+	
+	InfoPopupContent.CanvasSize = UDim2.new(0, 0, 0, totalHeight + 20)
+end
+
+local function HideInfoPopup()
+	InfoVisible = false
+	InfoPopup.Visible = false
+	MainFrame.Visible = true
+end
+
+CloseButton.MouseButton1Click:Connect(function()
+	ScreenGui:Destroy()
+end)
+
+ToggleButton.MouseButton1Click:Connect(function()
+	ToggleAntiAFK()
+end)
+
+HybridButton.MouseButton1Click:Connect(function()
+	SelectMethod("Hybrid")
+end)
+
+NewMethodButton.MouseButton1Click:Connect(function()
+	SelectMethod("New")
+end)
+
+OldMethodButton.MouseButton1Click:Connect(function()
+	SelectMethod("Old")
+end)
+
+MiniInfoButton.MouseButton1Click:Connect(function()
+	ShowInfoPopup()
+end)
+
+InfoPopupClose.MouseButton1Click:Connect(function()
+	HideInfoPopup()
+end)
+
+TimeInput.FocusLost:Connect(function(enterPressed)
+	local newTime = tonumber(TimeInput.Text)
+	if newTime then
+		UpdateMaxTime(newTime)
+	else
+		TimeInput.Text = tostring(MaxAFKTime)
+	end
+end)
+
+UpdateMaxTime(MaxAFKTime)
+SelectMethod("Hybrid")
+
+MainFrame.Parent = ScreenGui
+
+SetupDragging(MainFrame, TitleFrame)
+SetupDragging(InfoPopup, InfoPopupTitleFrame)
+
+UserInputService.InputBegan:Connect(function(input)
+	if AFKEnabled then
+		LastActivity = os.time()
+	end
+end)
+
+print("=========================================")
+print("     ANTI-AFK SYSTEM ĐÃ KHỞI ĐỘNG")
+print("=========================================")
+print("Phương pháp mặc định: Hybrid")
+print("Thời gian chờ: " .. MaxAFKTime .. " giây")
+print("Nhấn nút ? để xem thông tin chi tiết")
+print("=========================================")local Players = game:GetService("Players")
+local UserInputService = game:GetService("UserInputService")
+local RunService = game:GetService("RunService")
+local TweenService = game:GetService("TweenService")
+local VirtualUser = game:GetService('VirtualUser')
+
+local Player = Players.LocalPlayer
+local Mouse = Player:GetMouse()
+local AFKEnabled = false
+local AFKTime = 0
+local MaxAFKTime = 300
+local LastActivity = os.time()
+local Moving = false
+local AFKConnection
+local CurrentMethod = "Hybrid"
+local InfoVisible = false
+
+local ScreenGui = Instance.new("ScreenGui")
+ScreenGui.Name = "AntiAFKGui"
+ScreenGui.ZIndexBehavior = Enum.ZIndexBehavior.Sibling
+ScreenGui.DisplayOrder = 999
+ScreenGui.Parent = Player:WaitForChild("PlayerGui")
+
+local MainFrame = Instance.new("Frame")
+MainFrame.Name = "MainFrame"
+MainFrame.Size = UDim2.new(0, 400, 0, 550)
+MainFrame.Position = UDim2.new(0.5, -200, 0.5, -275)
+MainFrame.BackgroundColor3 = Color3.fromRGB(30, 30, 40)
+MainFrame.BackgroundTransparency = 0.1
+MainFrame.BorderSizePixel = 0
+MainFrame.ClipsDescendants = true
+
+local UICorner = Instance.new("UICorner")
+UICorner.CornerRadius = UDim.new(0, 12)
+UICorner.Parent = MainFrame
+
+local UIStroke = Instance.new("UIStroke")
+UIStroke.Color = Color3.fromRGB(70, 130, 200)
+UIStroke.Thickness = 2
+UIStroke.Parent = MainFrame
+
+local DropShadow = Instance.new("ImageLabel")
+DropShadow.Name = "DropShadow"
+DropShadow.Image = "rbxassetid://6014261993"
+DropShadow.ImageColor3 = Color3.fromRGB(0, 0, 0)
+DropShadow.ImageTransparency = 0.5
+DropShadow.ScaleType = Enum.ScaleType.Slice
+DropShadow.SliceCenter = Rect.new(49, 49, 450, 450)
+DropShadow.Size = UDim2.new(1, 18, 1, 18)
+DropShadow.Position = UDim2.new(0, -9, 0, -9)
+DropShadow.BackgroundTransparency = 1
+DropShadow.Parent = MainFrame
+
+local TitleFrame = Instance.new("Frame")
+TitleFrame.Name = "TitleFrame"
+TitleFrame.Size = UDim2.new(1, 0, 0, 60)
+TitleFrame.BackgroundColor3 = Color3.fromRGB(40, 40, 55)
+TitleFrame.BorderSizePixel = 0
+TitleFrame.Parent = MainFrame
+
+local TitleCorner = Instance.new("UICorner")
+TitleCorner.CornerRadius = UDim.new(0, 12)
+TitleCorner.Parent = TitleFrame
+
+local Title = Instance.new("TextLabel")
+Title.Name = "Title"
+Title.Size = UDim2.new(1, -20, 1, 0)
+Title.Position = UDim2.new(0, 10, 0, 0)
+Title.BackgroundTransparency = 1
+Title.Text = "ANTI-AFK SYSTEM"
+Title.TextColor3 = Color3.fromRGB(255, 255, 255)
+Title.TextSize = 24
+Title.Font = Enum.Font.GothamBold
+Title.TextXAlignment = Enum.TextXAlignment.Left
+Title.Parent = TitleFrame
+
+local SubTitle = Instance.new("TextLabel")
+SubTitle.Name = "SubTitle"
+SubTitle.Size = UDim2.new(1, -20, 0, 20)
+SubTitle.Position = UDim2.new(0, 10, 0, 30)
+SubTitle.BackgroundTransparency = 1
+SubTitle.Text = "Ngăn chặn kick do không hoạt động"
+SubTitle.TextColor3 = Color3.fromRGB(180, 180, 220)
+SubTitle.TextSize = 14
+SubTitle.Font = Enum.Font.Gotham
+SubTitle.TextXAlignment = Enum.TextXAlignment.Left
+SubTitle.Parent = TitleFrame
+
+local CloseButton = Instance.new("TextButton")
+CloseButton.Name = "CloseButton"
+CloseButton.Size = UDim2.new(0, 30, 0, 30)
+CloseButton.Position = UDim2.new(1, -35, 0, 15)
+CloseButton.BackgroundColor3 = Color3.fromRGB(50, 50, 70)
+CloseButton.BorderSizePixel = 0
+CloseButton.Text = "×"
+CloseButton.TextColor3 = Color3.fromRGB(255, 255, 255)
+CloseButton.TextSize = 20
+CloseButton.Font = Enum.Font.GothamBold
+CloseButton.Parent = TitleFrame
+
+local CloseCorner = Instance.new("UICorner")
+CloseCorner.CornerRadius = UDim.new(0, 8)
+CloseCorner.Parent = CloseButton
+
+local MiniInfoButton = Instance.new("TextButton")
+MiniInfoButton.Name = "MiniInfoButton"
+MiniInfoButton.Size = UDim2.new(0, 30, 0, 30)
+MiniInfoButton.Position = UDim2.new(1, -70, 0, 15)
+MiniInfoButton.BackgroundColor3 = Color3.fromRGB(70, 130, 200)
+MiniInfoButton.BorderSizePixel = 0
+MiniInfoButton.Text = "?"
+MiniInfoButton.TextColor3 = Color3.fromRGB(255, 255, 255)
+MiniInfoButton.TextSize = 18
+MiniInfoButton.Font = Enum.Font.GothamBold
+MiniInfoButton.Parent = TitleFrame
+
+local MiniInfoCorner = Instance.new("UICorner")
+MiniInfoCorner.CornerRadius = UDim.new(0, 8)
+MiniInfoCorner.Parent = MiniInfoButton
+
+local ContentFrame = Instance.new("Frame")
+ContentFrame.Name = "ContentFrame"
+ContentFrame.Size = UDim2.new(1, -20, 1, -80)
+ContentFrame.Position = UDim2.new(0, 10, 0, 70)
+ContentFrame.BackgroundTransparency = 1
+ContentFrame.Parent = MainFrame
+
+local StatusFrame = Instance.new("Frame")
+StatusFrame.Name = "StatusFrame"
+StatusFrame.Size = UDim2.new(1, 0, 0, 100)
+StatusFrame.BackgroundColor3 = Color3.fromRGB(40, 40, 55)
+StatusFrame.BorderSizePixel = 0
+StatusFrame.Parent = ContentFrame
+
+local StatusCorner = Instance.new("UICorner")
+StatusCorner.CornerRadius = UDim.new(0, 10)
+StatusCorner.Parent = StatusFrame
+
+local StatusTitle = Instance.new("TextLabel")
+StatusTitle.Name = "StatusTitle"
+StatusTitle.Size = UDim2.new(1, -20, 0, 30)
+StatusTitle.Position = UDim2.new(0, 10, 0, 5)
+StatusTitle.BackgroundTransparency = 1
+StatusTitle.Text = "TRẠNG THÁI"
+StatusTitle.TextColor3 = Color3.fromRGB(200, 200, 220)
+StatusTitle.TextSize = 16
+StatusTitle.Font = Enum.Font.GothamBold
+StatusTitle.TextXAlignment = Enum.TextXAlignment.Left
+StatusTitle.Parent = StatusFrame
+
+local StatusIndicator = Instance.new("Frame")
+StatusIndicator.Name = "StatusIndicator"
+StatusIndicator.Size = UDim2.new(0, 20, 0, 20)
+StatusIndicator.Position = UDim2.new(0, 15, 0, 40)
+StatusIndicator.BackgroundColor3 = Color3.fromRGB(220, 60, 60)
+StatusIndicator.BorderSizePixel = 0
+StatusIndicator.Parent = StatusFrame
+
+local StatusCorner2 = Instance.new("UICorner")
+StatusCorner2.CornerRadius = UDim.new(1, 0)
+StatusCorner2.Parent = StatusIndicator
+
+local StatusText = Instance.new("TextLabel")
+StatusText.Name = "StatusText"
+StatusText.Size = UDim2.new(1, -50, 0, 30)
+StatusText.Position = UDim2.new(0, 45, 0, 37)
+StatusText.BackgroundTransparency = 1
+StatusText.Text = "ĐANG TẮT"
+StatusText.TextColor3 = Color3.fromRGB(255, 255, 255)
+StatusText.TextSize = 18
+StatusText.Font = Enum.Font.GothamBold
+StatusText.TextXAlignment = Enum.TextXAlignment.Left
+StatusText.Parent = StatusFrame
+
+local TimeText = Instance.new("TextLabel")
+TimeText.Name = "TimeText"
+TimeText.Size = UDim2.new(1, -20, 0, 25)
+TimeText.Position = UDim2.new(0, 10, 0, 70)
+TimeText.BackgroundTransparency = 1
+TimeText.Text = "Thời gian chờ: 0 giây"
+TimeText.TextColor3 = Color3.fromRGB(180, 180, 220)
+TimeText.TextSize = 14
+TimeText.Font = Enum.Font.Gotham
+TimeText.TextXAlignment = Enum.TextXAlignment.Left
+TimeText.Parent = StatusFrame
+
+local ToggleButton = Instance.new("TextButton")
+ToggleButton.Name = "ToggleButton"
+ToggleButton.Size = UDim2.new(1, 0, 0, 50)
+ToggleButton.Position = UDim2.new(0, 0, 0, 110)
+ToggleButton.BackgroundColor3 = Color3.fromRGB(70, 130, 200)
+ToggleButton.BorderSizePixel = 0
+ToggleButton.Text = "BẬT ANTI-AFK"
+ToggleButton.TextColor3 = Color3.fromRGB(255, 255, 255)
+ToggleButton.TextSize = 18
+ToggleButton.Font = Enum.Font.GothamBold
+ToggleButton.Parent = ContentFrame
+
+local ToggleCorner = Instance.new("UICorner")
+ToggleCorner.CornerRadius = UDim.new(0, 10)
+ToggleCorner.Parent = ToggleButton
+
+local ProgressFrame = Instance.new("Frame")
+ProgressFrame.Name = "ProgressFrame"
+ProgressFrame.Size = UDim2.new(1, 0, 0, 30)
+ProgressFrame.Position = UDim2.new(0, 0, 0, 170)
+ProgressFrame.BackgroundColor3 = Color3.fromRGB(40, 40, 55)
+ProgressFrame.BorderSizePixel = 0
+ProgressFrame.Parent = ContentFrame
+
+local ProgressCorner = Instance.new("UICorner")
+ProgressCorner.CornerRadius = UDim.new(0, 8)
+ProgressCorner.Parent = ProgressFrame
+
+local ProgressBar = Instance.new("Frame")
+ProgressBar.Name = "ProgressBar"
+ProgressBar.Size = UDim2.new(0, 0, 1, 0)
+ProgressBar.BackgroundColor3 = Color3.fromRGB(70, 130, 200)
+ProgressBar.BorderSizePixel = 0
+ProgressBar.Parent = ProgressFrame
+
+local ProgressCorner2 = Instance.new("UICorner")
+ProgressCorner2.CornerRadius = UDim.new(0, 8)
+ProgressCorner2.Parent = ProgressBar
+
+local ProgressText = Instance.new("TextLabel")
+ProgressText.Name = "ProgressText"
+ProgressText.Size = UDim2.new(1, 0, 1, 0)
+ProgressText.BackgroundTransparency = 1
+ProgressText.Text = "0%"
+ProgressText.TextColor3 = Color3.fromRGB(255, 255, 255)
+ProgressText.TextSize = 14
+ProgressText.Font = Enum.Font.GothamBold
+ProgressText.Parent = ProgressFrame
+
+local MethodFrame = Instance.new("Frame")
+MethodFrame.Name = "MethodFrame"
+MethodFrame.Size = UDim2.new(1, 0, 0, 100)
+MethodFrame.Position = UDim2.new(0, 0, 0, 210)
+MethodFrame.BackgroundColor3 = Color3.fromRGB(40, 40, 55)
+MethodFrame.BorderSizePixel = 0
+MethodFrame.Parent = ContentFrame
+
+local MethodCorner = Instance.new("UICorner")
+MethodCorner.CornerRadius = UDim.new(0, 10)
+MethodCorner.Parent = MethodFrame
+
+local MethodTitle = Instance.new("TextLabel")
+MethodTitle.Name = "MethodTitle"
+MethodTitle.Size = UDim2.new(1, -20, 0, 30)
+MethodTitle.Position = UDim2.new(0, 10, 0, 5)
+MethodTitle.BackgroundTransparency = 1
+MethodTitle.Text = "PHƯƠNG PHÁP CHỐNG AFK"
+MethodTitle.TextColor3 = Color3.fromRGB(200, 200, 220)
+MethodTitle.TextSize = 16
+MethodTitle.Font = Enum.Font.GothamBold
+MethodTitle.TextXAlignment = Enum.TextXAlignment.Left
+MethodTitle.Parent = MethodFrame
+
+local HybridButton = Instance.new("TextButton")
+HybridButton.Name = "HybridButton"
+HybridButton.Size = UDim2.new(0.32, -5, 0, 30)
+HybridButton.Position = UDim2.new(0, 10, 0, 40)
+HybridButton.BackgroundColor3 = Color3.fromRGB(70, 130, 200)
+HybridButton.BorderSizePixel = 0
+HybridButton.Text = "Hybrid"
+HybridButton.TextColor3 = Color3.fromRGB(255, 255, 255)
+HybridButton.TextSize = 14
+HybridButton.Font = Enum.Font.GothamBold
+HybridButton.Parent = MethodFrame
+
+local HybridCorner = Instance.new("UICorner")
+HybridCorner.CornerRadius = UDim.new(0, 6)
+HybridCorner.Parent = HybridButton
+
+local NewMethodButton = Instance.new("TextButton")
+NewMethodButton.Name = "NewMethodButton"
+NewMethodButton.Size = UDim2.new(0.32, -5, 0, 30)
+NewMethodButton.Position = UDim2.new(0.34, 5, 0, 40)
+NewMethodButton.BackgroundColor3 = Color3.fromRGB(50, 50, 70)
+NewMethodButton.BorderSizePixel = 0
+NewMethodButton.Text = "Mới"
+NewMethodButton.TextColor3 = Color3.fromRGB(220, 220, 240)
+NewMethodButton.TextSize = 14
+NewMethodButton.Font = Enum.Font.GothamBold
+NewMethodButton.Parent = MethodFrame
+
+local NewMethodCorner = Instance.new("UICorner")
+NewMethodCorner.CornerRadius = UDim.new(0, 6)
+NewMethodCorner.Parent = NewMethodButton
+
+local OldMethodButton = Instance.new("TextButton")
+OldMethodButton.Name = "OldMethodButton"
+OldMethodButton.Size = UDim2.new(0.32, -5, 0, 30)
+OldMethodButton.Position = UDim2.new(0.68, 0, 0, 40)
+OldMethodButton.BackgroundColor3 = Color3.fromRGB(50, 50, 70)
+OldMethodButton.BorderSizePixel = 0
+OldMethodButton.Text = "Cũ"
+OldMethodButton.TextColor3 = Color3.fromRGB(220, 220, 240)
+OldMethodButton.TextSize = 14
+OldMethodButton.Font = Enum.Font.GothamBold
+OldMethodButton.Parent = MethodFrame
+
+local OldMethodCorner = Instance.new("UICorner")
+OldMethodCorner.CornerRadius = UDim.new(0, 6)
+OldMethodCorner.Parent = OldMethodButton
+
+local MethodDescription = Instance.new("TextLabel")
+MethodDescription.Name = "MethodDescription"
+MethodDescription.Size = UDim2.new(1, -20, 0, 25)
+MethodDescription.Position = UDim2.new(0, 10, 0, 75)
+MethodDescription.BackgroundTransparency = 1
+MethodDescription.Text = "Kết hợp cả hai: Click chuột ảo + Di chuyển nhân vật (An toàn nhất)"
+MethodDescription.TextColor3 = Color3.fromRGB(180, 180, 220)
+MethodDescription.TextSize = 12
+MethodDescription.Font = Enum.Font.Gotham
+MethodDescription.TextXAlignment = Enum.TextXAlignment.Left
+MethodDescription.Parent = MethodFrame
+
+local SettingsFrame = Instance.new("Frame")
+SettingsFrame.Name = "SettingsFrame"
+SettingsFrame.Size = UDim2.new(1, 0, 0, 120)
+SettingsFrame.Position = UDim2.new(0, 0, 0, 320)
+SettingsFrame.BackgroundColor3 = Color3.fromRGB(40, 40, 55)
+SettingsFrame.BorderSizePixel = 0
+SettingsFrame.Parent = ContentFrame
+
+local SettingsCorner = Instance.new("UICorner")
+SettingsCorner.CornerRadius = UDim.new(0, 10)
+SettingsCorner.Parent = SettingsFrame
+
+local SettingsTitle = Instance.new("TextLabel")
+SettingsTitle.Name = "SettingsTitle"
+SettingsTitle.Size = UDim2.new(1, -20, 0, 30)
+SettingsTitle.Position = UDim2.new(0, 10, 0, 5)
+SettingsTitle.BackgroundTransparency = 1
+SettingsTitle.Text = "CÀI ĐẶT THỜI GIAN"
+SettingsTitle.TextColor3 = Color3.fromRGB(200, 200, 220)
+SettingsTitle.TextSize = 16
+SettingsTitle.Font = Enum.Font.GothamBold
+SettingsTitle.TextXAlignment = Enum.TextXAlignment.Left
+SettingsTitle.Parent = SettingsFrame
+
+local TimeLabel = Instance.new("TextLabel")
+TimeLabel.Name = "TimeLabel"
+TimeLabel.Size = UDim2.new(0.6, 0, 0, 30)
+TimeLabel.Position = UDim2.new(0, 10, 0, 40)
+TimeLabel.BackgroundTransparency = 1
+TimeLabel.Text = "Thời gian chờ (giây):"
+TimeLabel.TextColor3 = Color3.fromRGB(220, 220, 240)
+TimeLabel.TextSize = 14
+TimeLabel.Font = Enum.Font.Gotham
+TimeLabel.TextXAlignment = Enum.TextXAlignment.Left
+TimeLabel.Parent = SettingsFrame
+
+local TimeValue = Instance.new("TextLabel")
+TimeValue.Name = "TimeValue"
+TimeValue.Size = UDim2.new(0.3, -10, 0, 30)
+TimeValue.Position = UDim2.new(0.7, 0, 0, 40)
+TimeValue.BackgroundColor3 = Color3.fromRGB(50, 50, 70)
+TimeValue.BorderSizePixel = 0
+TimeValue.Text = tostring(MaxAFKTime)
+TimeValue.TextColor3 = Color3.fromRGB(255, 255, 255)
+TimeValue.TextSize = 16
+TimeValue.Font = Enum.Font.GothamBold
+TimeValue.Parent = SettingsFrame
+
+local TimeCorner = Instance.new("UICorner")
+TimeCorner.CornerRadius = UDim.new(0, 6)
+TimeCorner.Parent = TimeValue
+
+local TimeSlider = Instance.new("TextButton")
+TimeSlider.Name = "TimeSlider"
+TimeSlider.Size = UDim2.new(1, -20, 0, 20)
+TimeSlider.Position = UDim2.new(0, 10, 0, 85)
+TimeSlider.BackgroundColor3 = Color3.fromRGB(60, 60, 80)
+TimeSlider.BorderSizePixel = 0
+TimeSlider.Text = ""
+TimeSlider.Parent = SettingsFrame
+
+local TimeSliderCorner = Instance.new("UICorner")
+TimeSliderCorner.CornerRadius = UDim.new(0, 10)
+TimeSliderCorner.Parent = TimeSlider
+
+local TimeSliderFill = Instance.new("Frame")
+TimeSliderFill.Name = "TimeSliderFill"
+TimeSliderFill.Size = UDim2.new((MaxAFKTime - 30) / (600 - 30), 0, 1, 0)
+TimeSliderFill.BackgroundColor3 = Color3.fromRGB(70, 130, 200)
+TimeSliderFill.BorderSizePixel = 0
+TimeSliderFill.Parent = TimeSlider
+
+local TimeSliderFillCorner = Instance.new("UICorner")
+TimeSliderFillCorner.CornerRadius = UDim.new(0, 10)
+TimeSliderFillCorner.Parent = TimeSliderFill
+
+local TimeSliderButton = Instance.new("TextButton")
+TimeSliderButton.Name = "TimeSliderButton"
+TimeSliderButton.Size = UDim2.new(0, 20, 0, 20)
+TimeSliderButton.BackgroundColor3 = Color3.fromRGB(255, 255, 255)
+TimeSliderButton.BorderSizePixel = 0
+TimeSliderButton.Text = ""
+TimeSliderButton.Parent = TimeSlider
+
+local TimeSliderButtonCorner = Instance.new("UICorner")
+TimeSliderButtonCorner.CornerRadius = UDim.new(1, 0)
+TimeSliderButtonCorner.Parent = TimeSliderButton
+
+local InfoFrame = Instance.new("Frame")
+InfoFrame.Name = "InfoFrame"
+InfoFrame.Size = UDim2.new(1, 0, 0, 80)
+InfoFrame.Position = UDim2.new(0, 0, 0, 450)
+InfoFrame.BackgroundColor3 = Color3.fromRGB(40, 40, 55)
+InfoFrame.BorderSizePixel = 0
+InfoFrame.Parent = ContentFrame
+
+local InfoCorner = Instance.new("UICorner")
+InfoCorner.CornerRadius = UDim.new(0, 10)
+InfoCorner.Parent = InfoFrame
+
+local InfoTitle = Instance.new("TextLabel")
+InfoTitle.Name = "InfoTitle"
+InfoTitle.Size = UDim2.new(1, -20, 0, 25)
+InfoTitle.Position = UDim2.new(0, 10, 0, 5)
+InfoTitle.BackgroundTransparency = 1
+InfoTitle.Text = "THÔNG TIN"
+InfoTitle.TextColor3 = Color3.fromRGB(200, 200, 220)
+InfoTitle.TextSize = 16
+InfoTitle.Font = Enum.Font.GothamBold
+InfoTitle.TextXAlignment = Enum.TextXAlignment.Left
+InfoTitle.Parent = InfoFrame
+
+local InfoText = Instance.new("TextLabel")
+InfoText.Name = "InfoText"
+InfoText.Size = UDim2.new(1, -20, 1, -35)
+InfoText.Position = UDim2.new(0, 10, 0, 30)
+InfoText.BackgroundTransparency = 1
+InfoText.Text = "Hệ thống sẽ tự động chống AFK khi phát hiện không hoạt động trong thời gian đã cài đặt."
+InfoText.TextColor3 = Color3.fromRGB(180, 180, 220)
+InfoText.TextSize = 12
+InfoText.Font = Enum.Font.Gotham
+InfoText.TextXAlignment = Enum.TextXAlignment.Left
+InfoText.TextYAlignment = Enum.TextYAlignment.Top
+InfoText.TextWrapped = true
+InfoText.Parent = InfoFrame
+
+local DragFrame = Instance.new("Frame")
+DragFrame.Name = "DragFrame"
+DragFrame.Size = UDim2.new(1, 0, 0, 30)
+DragFrame.Position = UDim2.new(0, 0, 0, 0)
+DragFrame.BackgroundTransparency = 1
+DragFrame.Parent = MainFrame
+
+local LoadingCircle = Instance.new("Frame")
+LoadingCircle.Name = "LoadingCircle"
+LoadingCircle.Size = UDim2.new(0, 60, 0, 60)
+LoadingCircle.Position = UDim2.new(0.5, -30, 0.5, -30)
+LoadingCircle.BackgroundTransparency = 1
+LoadingCircle.Visible = false
+LoadingCircle.Parent = MainFrame
+
+local Circle1 = Instance.new("Frame")
+Circle1.Name = "Circle1"
+Circle1.Size = UDim2.new(0, 20, 0, 20)
+Circle1.Position = UDim2.new(0, 20, 0, 0)
+Circle1.BackgroundColor3 = Color3.fromRGB(70, 130, 200)
+Circle1.BorderSizePixel = 0
+Circle1.Parent = LoadingCircle
+
+local CircleCorner1 = Instance.new("UICorner")
+CircleCorner1.CornerRadius = UDim.new(1, 0)
+CircleCorner1.Parent = Circle1
+
+local Circle2 = Instance.new("Frame")
+Circle2.Name = "Circle2"
+Circle2.Size = UDim2.new(0, 20, 0, 20)
+Circle2.Position = UDim2.new(0, 40, 0, 20)
+Circle2.BackgroundColor3 = Color3.fromRGB(70, 130, 200)
+Circle2.BorderSizePixel = 0
+Circle2.Parent = LoadingCircle
+
+local CircleCorner2 = Instance.new("UICorner")
+CircleCorner2.CornerRadius = UDim.new(1, 0)
+CircleCorner2.Parent = Circle2
+
+local Circle3 = Instance.new("Frame")
+Circle3.Name = "Circle3"
+Circle3.Size = UDim2.new(0, 20, 0, 20)
+Circle3.Position = UDim2.new(0, 20, 0, 40)
+Circle3.BackgroundColor3 = Color3.fromRGB(70, 130, 200)
+Circle3.BorderSizePixel = 0
+Circle3.Parent = LoadingCircle
+
+local CircleCorner3 = Instance.new("UICorner")
+CircleCorner3.CornerRadius = UDim.new(1, 0)
+CircleCorner3.Parent = Circle3
+
+local Circle4 = Instance.new("Frame")
+Circle4.Name = "Circle4"
+Circle4.Size = UDim2.new(0, 20, 0, 20)
+Circle4.Position = UDim2.new(0, 0, 0, 20)
+Circle4.BackgroundColor3 = Color3.fromRGB(70, 130, 200)
+Circle4.BorderSizePixel = 0
+Circle4.Parent = LoadingCircle
+
+local CircleCorner4 = Instance.new("UICorner")
+CircleCorner4.CornerRadius = UDim.new(1, 0)
+CircleCorner4.Parent = Circle4
+
+local InfoPopup = Instance.new("Frame")
+InfoPopup.Name = "InfoPopup"
+InfoPopup.Size = UDim2.new(0, 450, 0, 500)
+InfoPopup.Position = UDim2.new(0.5, -225, 0.5, -250)
+InfoPopup.BackgroundColor3 = Color3.fromRGB(30, 30, 40)
+InfoPopup.BackgroundTransparency = 0.1
+InfoPopup.BorderSizePixel = 0
+InfoPopup.ClipsDescendants = true
+InfoPopup.Visible = false
+InfoPopup.ZIndex = 100
+InfoPopup.Parent = ScreenGui
+
+local InfoPopupCorner = Instance.new("UICorner")
+InfoPopupCorner.CornerRadius = UDim.new(0, 12)
+InfoPopupCorner.Parent = InfoPopup
+
+local InfoPopupStroke = Instance.new("UIStroke")
+InfoPopupStroke.Color = Color3.fromRGB(70, 130, 200)
+InfoPopupStroke.Thickness = 2
+InfoPopupStroke.Parent = InfoPopup
+
+local InfoPopupDropShadow = Instance.new("ImageLabel")
+InfoPopupDropShadow.Name = "DropShadow"
+InfoPopupDropShadow.Image = "rbxassetid://6014261993"
+InfoPopupDropShadow.ImageColor3 = Color3.fromRGB(0, 0, 0)
+InfoPopupDropShadow.ImageTransparency = 0.5
+InfoPopupDropShadow.ScaleType = Enum.ScaleType.Slice
+InfoPopupDropShadow.SliceCenter = Rect.new(49, 49, 450, 450)
+InfoPopupDropShadow.Size = UDim2.new(1, 18, 1, 18)
+InfoPopupDropShadow.Position = UDim2.new(0, -9, 0, -9)
+InfoPopupDropShadow.BackgroundTransparency = 1
+InfoPopupDropShadow.ZIndex = 99
+InfoPopupDropShadow.Parent = InfoPopup
+
+local InfoPopupTitle = Instance.new("TextLabel")
+InfoPopupTitle.Name = "InfoPopupTitle"
+InfoPopupTitle.Size = UDim2.new(1, -20, 0, 60)
+InfoPopupTitle.Position = UDim2.new(0, 10, 0, 0)
+InfoPopupTitle.BackgroundTransparency = 1
+InfoPopupTitle.Text = "📚 THÔNG TIN CHI TIẾT PHƯƠNG PHÁP"
+InfoPopupTitle.TextColor3 = Color3.fromRGB(255, 255, 255)
+InfoPopupTitle.TextSize = 22
+InfoPopupTitle.Font = Enum.Font.GothamBold
+InfoPopupTitle.TextXAlignment = Enum.TextXAlignment.Left
+InfoPopupTitle.ZIndex = 101
+InfoPopupTitle.Parent = InfoPopup
+
+local InfoPopupClose = Instance.new("TextButton")
+InfoPopupClose.Name = "InfoPopupClose"
+InfoPopupClose.Size = UDim2.new(0, 30, 0, 30)
+InfoPopupClose.Position = UDim2.new(1, -35, 0, 15)
+InfoPopupClose.BackgroundColor3 = Color3.fromRGB(50, 50, 70)
+InfoPopupClose.BorderSizePixel = 0
+InfoPopupClose.Text = "×"
+InfoPopupClose.TextColor3 = Color3.fromRGB(255, 255, 255)
+InfoPopupClose.TextSize = 20
+InfoPopupClose.Font = Enum.Font.GothamBold
+InfoPopupClose.ZIndex = 101
+InfoPopupClose.Parent = InfoPopup
+
+local InfoPopupCloseCorner = Instance.new("UICorner")
+InfoPopupCloseCorner.CornerRadius = UDim.new(0, 8)
+InfoPopupCloseCorner.Parent = InfoPopupClose
+
+local InfoPopupContent = Instance.new("ScrollingFrame")
+InfoPopupContent.Name = "InfoPopupContent"
+InfoPopupContent.Size = UDim2.new(1, -20, 1, -80)
+InfoPopupContent.Position = UDim2.new(0, 10, 0, 70)
+InfoPopupContent.BackgroundTransparency = 1
+InfoPopupContent.BorderSizePixel = 0
+InfoPopupContent.ScrollBarThickness = 8
+InfoPopupContent.ZIndex = 101
+InfoPopupContent.Parent = InfoPopup
+
+local InfoPopupLayout = Instance.new("UIListLayout")
+InfoPopupLayout.Padding = UDim.new(0, 15)
+InfoPopupLayout.Parent = InfoPopupContent
+
+local function UpdateProgressBar()
+	local progress = AFKTime / MaxAFKTime
+	ProgressBar.Size = UDim2.new(progress, 0, 1, 0)
+	ProgressText.Text = math.floor(progress * 100) .. "%"
+	
+	if progress < 0.5 then
+		ProgressBar.BackgroundColor3 = Color3.fromRGB(70, 200, 130)
+	elseif progress < 0.8 then
+		ProgressBar.BackgroundColor3 = Color3.fromRGB(255, 200, 50)
+	else
+		ProgressBar.BackgroundColor3 = Color3.fromRGB(220, 70, 70)
+	end
+end
+
+local function UpdateTime()
+	TimeText.Text = "Thời gian chờ: " .. math.floor(AFKTime) .. " giây"
+	UpdateProgressBar()
+end
+
+local function HybridMethod()
+	VirtualUser:CaptureController()
+	VirtualUser:ClickButton2(Vector2.new())
+	
+	local character = Player.Character
+	if character and character:FindFirstChild("Humanoid") then
+		character.Humanoid.Jump = true
+		
+		local randomDirection = Vector3.new(
+			math.random(-1, 1),
+			0,
+			math.random(-1, 1)
+		).Unit
+		
+		spawn(function()
+			character.Humanoid:Move(randomDirection)
+			wait(0.5)
+			character.Humanoid:Move(Vector3.zero)
+		end)
+	end
+end
+
+local function NewMethod()
+	local character = Player.Character
+	if character and character:FindFirstChild("Humanoid") then
+		character.Humanoid.Jump = true
+		
+		local randomDirection = Vector3.new(
+			math.random(-1, 1),
+			0,
+			math.random(-1, 1)
+		).Unit
+		
+		spawn(function()
+			character.Humanoid:Move(randomDirection)
+			wait(1)
+			character.Humanoid:Move(Vector3.zero)
+		end)
+	end
+end
+
+local function OldMethod()
+	VirtualUser:CaptureController()
+	VirtualUser:ClickButton2(Vector2.new())
+end
+
+local function SelectMethod(method)
+	CurrentMethod = method
+	
+	HybridButton.BackgroundColor3 = Color3.fromRGB(50, 50, 70)
+	NewMethodButton.BackgroundColor3 = Color3.fromRGB(50, 50, 70)
+	OldMethodButton.BackgroundColor3 = Color3.fromRGB(50, 50, 70)
+	
+	HybridButton.TextColor3 = Color3.fromRGB(220, 220, 240)
+	NewMethodButton.TextColor3 = Color3.fromRGB(220, 220, 240)
+	OldMethodButton.TextColor3 = Color3.fromRGB(220, 220, 240)
+	
+	if method == "Hybrid" then
+		HybridButton.BackgroundColor3 = Color3.fromRGB(70, 130, 200)
+		HybridButton.TextColor3 = Color3.fromRGB(255, 255, 255)
+		MethodDescription.Text = "Kết hợp cả hai: Click chuột ảo + Di chuyển nhân vật (An toàn nhất - Đề xuất)"
+		
+	elseif method == "New" then
+		NewMethodButton.BackgroundColor3 = Color3.fromRGB(70, 200, 130)
+		NewMethodButton.TextColor3 = Color3.fromRGB(255, 255, 255)
+		MethodDescription.Text = "Phương pháp mới: Di chuyển nhân vật và nhảy (Ít bị phát hiện, nhưng có thể không hiệu quả với một số game)"
+		
+	elseif method == "Old" then
+		OldMethodButton.BackgroundColor3 = Color3.fromRGB(200, 130, 70)
+		OldMethodButton.TextColor3 = Color3.fromRGB(255, 255, 255)
+		MethodDescription.Text = "Phương pháp cũ: Click chuột ảo (Hiệu quả với hầu hết game, nhưng dễ bị phát hiện bởi anti-cheat)"
+	end
+	
+	print("Đã chọn phương pháp: " .. method)
+end
+
+local function ToggleAntiAFK()
+	AFKEnabled = not AFKEnabled
+	
+	if AFKEnabled then
+		StatusIndicator.BackgroundColor3 = Color3.fromRGB(70, 200, 130)
+		StatusText.Text = "ĐANG BẬT"
+		ToggleButton.Text = "TẮT ANTI-AFK"
+		ToggleButton.BackgroundColor3 = Color3.fromRGB(220, 70, 70)
+		
+		LastActivity = os.time()
+		AFKTime = 0
+		
+		LoadingCircle.Visible = true
+		
+		if AFKConnection then
+			AFKConnection:Disconnect()
+		end
+		
+		AFKConnection = RunService.Heartbeat:Connect(function(deltaTime)
+			local currentTime = os.time()
+			
+			if UserInputService:GetMouseDelta().Magnitude > 0 then
+				LastActivity = currentTime
+				AFKTime = 0
+				Moving = false
+			end
+			
+			AFKTime = currentTime - LastActivity
+			UpdateTime()
+			
+			if AFKTime >= MaxAFKTime then
+				if not Moving then
+					Moving = true
+					
+					if CurrentMethod == "Hybrid" then
+						HybridMethod()
+					elseif CurrentMethod == "New" then
+						NewMethod()
+					elseif CurrentMethod == "Old" then
+						OldMethod()
+					end
+					
+					LastActivity = os.time()
+					AFKTime = 0
+					
+					print("Đã kích hoạt chống AFK với phương pháp: " .. CurrentMethod)
+				end
+			else
+				Moving = false
+			end
+		end)
+		
+	else
+		StatusIndicator.BackgroundColor3 = Color3.fromRGB(220, 60, 60)
+		StatusText.Text = "ĐANG TẮT"
+		ToggleButton.Text = "BẬT ANTI-AFK"
+		ToggleButton.BackgroundColor3 = Color3.fromRGB(70, 130, 200)
+		
+		LoadingCircle.Visible = false
+		
+		if AFKConnection then
+			AFKConnection:Disconnect()
+			AFKConnection = nil
+		end
+		
+		print("Đã tắt hệ thống chống AFK")
+	end
+end
+
+local function UpdateMaxTime(newTime)
+	MaxAFKTime = math.clamp(newTime, 30, 600)
+	TimeValue.Text = tostring(MaxAFKTime)
+	TimeSliderFill.Size = UDim2.new((MaxAFKTime - 30) / (600 - 30), 0, 1, 0)
+	UpdateProgressBar()
+end
+
+local function SetupSlider()
+	local slider = TimeSlider
+	local button = TimeSliderButton
+	local fill = TimeSliderFill
+	
+	local dragging = false
+	local dragStart = nil
+	local startPos = nil
+	
+	local function updateSlider(input)
+		local delta = input.Position.X - dragStart.X
+		local newPos = UDim2.new(math.clamp(startPos.X.Scale + delta / slider.AbsoluteSize.X, 0, 1), 0, 0, 0)
+		
+		button.Position = newPos
+		fill.Size = UDim2.new(newPos.X.Scale, 0, 1, 0)
+		
+		local newTime = math.floor(30 + newPos.X.Scale * (600 - 30))
+		UpdateMaxTime(newTime)
+	end
+	
+	button.MouseButton1Down:Connect(function()
+		dragging = true
+		dragStart = UserInputService:GetMouseLocation()
+		startPos = button.Position
+	end)
+	
+	slider.InputBegan:Connect(function(input)
+		if input.UserInputType == Enum.UserInputType.MouseButton1 then
+			dragging = true
+			dragStart = UserInputService:GetMouseLocation()
+			
+			local sliderAbsolutePos = slider.AbsolutePosition.X
+			local sliderAbsoluteSize = slider.AbsoluteSize.X
+			local mouseAbsolutePos = input.Position.X
+			
+			local relativePos = (mouseAbsolutePos - sliderAbsolutePos) / sliderAbsoluteSize
+			relativePos = math.clamp(relativePos, 0, 1)
+			
+			startPos = UDim2.new(relativePos, 0, 0, 0)
+			button.Position = startPos
+			fill.Size = UDim2.new(relativePos, 0, 1, 0)
+			
+			local newTime = math.floor(30 + relativePos * (600 - 30))
+			UpdateMaxTime(newTime)
+		end
+	end)
+	
+	UserInputService.InputChanged:Connect(function(input)
+		if dragging and input.UserInputType == Enum.UserInputType.MouseMovement then
+			updateSlider(input)
+		end
+	end)
+	
+	UserInputService.InputEnded:Connect(function(input)
+		if input.UserInputType == Enum.UserInputType.MouseButton1 then
+			dragging = false
+		end
+	end)
+end
+
+local function SetupDragging()
+	local dragToggle = nil
+	local dragInput = nil
+	local dragStart = nil
+	local startPos = nil
+	
+	local function updateInput(input)
+		local delta = input.Position - dragStart
+		local position = UDim2.new(startPos.X.Scale, startPos.X.Offset + delta.X, startPos.Y.Scale, startPos.Y.Offset + delta.Y)
+		MainFrame.Position = position
+	end
+	
+	DragFrame.InputBegan:Connect(function(input)
+		if input.UserInputType == Enum.UserInputType.MouseButton1 then
+			dragToggle = true
+			dragStart = input.Position
+			startPos = MainFrame.Position
+			
+			input.Changed:Connect(function()
+				if input.UserInputState == Enum.UserInputState.End then
+					dragToggle = false
+				end
+			end)
+		end
+	end)
+	
+	DragFrame.InputChanged:Connect(function(input)
+		if input.UserInputType == Enum.UserInputType.MouseMovement then
+			dragInput = input
+		end
+	end)
+	
+	UserInputService.InputChanged:Connect(function(input)
+		if input == dragInput and dragToggle then
+			updateInput(input)
+		end
+	end)
+end
+
+local function SetupLoadingAnimation()
+	spawn(function()
+		while true do
+			if LoadingCircle.Visible then
+				for i = 1, 4 do
+					local circle = LoadingCircle:FindFirstChild("Circle" .. i)
+					if circle then
+						local tween = TweenService:Create(
+							circle,
+							TweenInfo.new(0.5, Enum.EasingStyle.Quad, Enum.EasingDirection.Out),
+							{BackgroundTransparency = 0.3}
+						)
+						tween:Play()
+					end
+				end
+				
+				wait(0.2)
+				
+				for i = 1, 4 do
+					local circle = LoadingCircle:FindFirstChild("Circle" .. i)
+					if circle then
+						local tween = TweenService:Create(
+							circle,
+							TweenInfo.new(0.5, Enum.EasingStyle.Quad, Enum.EasingDirection.Out),
+							{BackgroundTransparency = 0}
+						)
+						tween:Play()
+					end
+				end
+				
+				wait(0.2)
+			else
+				wait(0.5)
+			end
+		end
+	end)
+end
+
+local function CreateInfoSection(title, content, color)
+	local sectionFrame = Instance.new("Frame")
+	sectionFrame.Name = title .. "Section"
+	sectionFrame.Size = UDim2.new(1, 0, 0, 0)
+	sectionFrame.BackgroundColor3 = Color3.fromRGB(40, 40, 55)
+	sectionFrame.BorderSizePixel = 0
+	sectionFrame.BackgroundTransparency = 0
+	sectionFrame.ZIndex = 101
+	
+	local sectionCorner = Instance.new("UICorner")
+	sectionCorner.CornerRadius = UDim.new(0, 10)
+	sectionCorner.Parent = sectionFrame
+	
+	local sectionTitle = Instance.new("TextLabel")
+	sectionTitle.Name = "SectionTitle"
+	sectionTitle.Size = UDim2.new(1, -20, 0, 40)
+	sectionTitle.Position = UDim2.new(0, 10, 0, 0)
+	sectionTitle.BackgroundTransparency = 1
+	sectionTitle.Text = "🔹 " .. title
+	sectionTitle.TextColor3 = color
+	sectionTitle.TextSize = 18
+	sectionTitle.Font = Enum.Font.GothamBold
+	sectionTitle.TextXAlignment = Enum.TextXAlignment.Left
+	sectionTitle.ZIndex = 102
+	sectionTitle.Parent = sectionFrame
+	
+	local sectionContent = Instance.new("TextLabel")
+	sectionContent.Name = "SectionContent"
+	sectionContent.Size = UDim2.new(1, -20, 0, 0)
+	sectionContent.Position = UDim2.new(0, 10, 0, 45)
+	sectionContent.BackgroundTransparency = 1
+	sectionContent.Text = content
+	sectionContent.TextColor3 = Color3.fromRGB(220, 220, 240)
+	sectionContent.TextSize = 14
+	sectionContent.Font = Enum.Font.Gotham
+	sectionContent.TextXAlignment = Enum.TextXAlignment.Left
+	sectionContent.TextYAlignment = Enum.TextYAlignment.Top
+	sectionContent.TextWrapped = true
+	sectionContent.ZIndex = 102
+	sectionContent.Parent = sectionFrame
+	
+	local function updateSize()
+		local textHeight = sectionContent.TextBounds.Y
+		sectionContent.Size = UDim2.new(1, -20, 0, textHeight)
+		sectionFrame.Size = UDim2.new(1, 0, 0, textHeight + 60)
+	end
+	
+	sectionContent:GetPropertyChangedSignal("TextBounds"):Connect(updateSize)
+	updateSize()
+	
+	return sectionFrame
+end
+
+local function ShowInfoPopup()
+	if InfoVisible then return end
+	
+	InfoVisible = true
+	InfoPopup.Visible = true
+	
+	while #InfoPopupContent:GetChildren() > 1 do
+		InfoPopupContent:GetChildren()[#InfoPopupContent:GetChildren()]:Destroy()
+	end
+	
+	local hybridInfo = CreateInfoSection(
+		"PHƯƠNG PHÁP HYBRID (KẾT HỢP)",
+		"• CÁCH HOẠT ĐỘNG: Sử dụng CẢ HAI phương pháp:\n  1. VirtualUser:ClickButton2() - Click chuột ảo\n  2. Di chuyển nhân vật + nhảy ngẫu nhiên\n\n• ƯU ĐIỂM:\n  ✓ An toàn nhất, hiệu quả 99%\n  ✓ Hoạt động với mọi loại game\n  ✓ Khó bị phát hiện AFK\n  ✓ Đề xuất mặc định\n\n• NHƯỢC ĐIỂM:\n  ✗ Hơi 'ồn ào' (nhiều hành động)\n  ✗ Có thể lộ với anti-cheat mạnh\n\n• DÙNG KHI: Chơi game thông thường, không biết game có anti-cheat mạnh không",
+		Color3.fromRGB(70, 130, 200)
+	)
+	hybridInfo.Parent = InfoPopupContent
+	
+	local newInfo = CreateInfoSection(
+		"PHƯƠNG PHÁP MỚI (DI CHUYỂN)",
+		"• CÁCH HOẠT ĐỘNG: Chỉ di chuyển nhân vật:\n  1. Nhảy lên (Humanoid.Jump = true)\n  2. Di chuyển ngẫu nhiên 1 hướng\n  3. Dừng sau 1 giây\n\n• ƯU ĐIỂM:\n  ✓ Rất tự nhiên, giống người chơi thật\n  ✓ Không dùng VirtualUser\n  ✓ Ít bị anti-cheat phát hiện\n  ✓ An toàn với game có anti-cheat\n\n• NHƯỢC ĐIỂM:\n  ✗ Có thể không hiệu quả với game chỉ check click\n  ✗ Nếu nhân vật bị mắc kẹt sẽ không hoạt động\n  ✗ Một số game không tính di chuyển là hoạt động\n\n• DÙNG KHI: Game có anti-cheat mạnh, game chỉ kick khi không di chuyển",
+		Color3.fromRGB(70, 200, 130)
+	)
+	newInfo.Parent = InfoPopupContent
+	
+	local oldInfo = CreateInfoSection(
+		"PHƯƠNG PHÁP CŨ (CLICK ẢO)",
+		"• CÁCH HOẠT ĐỘNG: Chỉ click chuột ảo:\n  1. VirtualUser:CaptureController()\n  2. VirtualUser:ClickButton2(Vector2.new())\n\n• ƯU ĐIỂM:\n  ✓ Đã được kiểm chứng lâu năm\n  ✓ Hiệu quả 100% với Roblox tiêu chuẩn\n  ✓ Đơn giản, ổn định\n  ✓ Không ảnh hưởng đến nhân vật\n\n• NHƯỢC ĐIỂM:\n  ✗ Dễ bị anti-cheat phát hiện\n  ✗ Có thể bị coi là 'bot'\n  ✗ Không hiệu quả với game chỉ check di chuyển\n\n• DÙNG KHI: Game không có anti-cheat, các phương pháp khác không hoạt động",
+		Color3.fromRGB(200, 130, 70)
+	)
+	oldInfo.Parent = InfoPopupContent
+	
+	local generalInfo = CreateInfoSection(
+		"THÔNG TIN CHUNG",
+		"• THỜI GIAN CHỜ: Cài đặt từ 30 giây đến 10 phút\n  - Game thường kick sau 20 phút không hoạt động\n  - Đề xuất: 2-5 phút là an toàn\n\n• CÁCH HOẠT ĐỘNG HỆ THỐNG:\n  1. Theo dõi chuột/bàn phím\n  2. Nếu không hoạt động > thời gian cài đặt\n  3. Kích hoạt phương pháp chống AFK\n  4. Reset thời gian đếm\n\n• LƯU Ý QUAN TRỌNG:\n  ⚠ Không lạm dụng trong game có anti-cheat mạnh\n  ⚠ Có thể bị ban nếu bị phát hiện\n  ⚠ Chỉ dùng khi thật sự cần (ăn cơm, đi vệ sinh)\n  ⚠ Luôn chọn phương pháp phù hợp với game",
+		Color3.fromRGB(180, 180, 220)
+	)
+	generalInfo.Parent = InfoPopupContent
+	
+	local totalHeight = 0
+	for _, child in pairs(InfoPopupContent:GetChildren()) do
+		if child:IsA("Frame") then
+			totalHeight = totalHeight + child.Size.Y.Offset + 15
+		end
+	end
+	
+	InfoPopupContent.CanvasSize = UDim2.new(0, 0, 0, totalHeight + 10)
+end
+
+local function HideInfoPopup()
+	InfoVisible = false
+	InfoPopup.Visible = false
+end
+
+CloseButton.MouseButton1Click:Connect(function()
+	ScreenGui:Destroy()
+end)
+
+ToggleButton.MouseButton1Click:Connect(function()
+	ToggleAntiAFK()
+end)
+
+HybridButton.MouseButton1Click:Connect(function()
+	SelectMethod("Hybrid")
+end)
+
+NewMethodButton.MouseButton1Click:Connect(function()
+	SelectMethod("New")
+end)
+
+OldMethodButton.MouseButton1Click:Connect(function()
+	SelectMethod("Old")
+end)
+
+MiniInfoButton.MouseButton1Click:Connect(function()
+	ShowInfoPopup()
+end)
+
+InfoPopupClose.MouseButton1Click:Connect(function()
+	HideInfoPopup()
+end)
+
+InfoPopup.InputBegan:Connect(function(input)
+	if input.UserInputType == Enum.UserInputType.MouseButton1 then
+		local dragToggle = true
+		local dragStart = input.Position
+		local startPos = InfoPopup.Position
+		
+		input.Changed:Connect(function()
+			if input.UserInputState == Enum.UserInputState.End then
+				dragToggle = false
+			end
+		end)
+		
+		local connection
+		connection = UserInputService.InputChanged:Connect(function(moveInput)
+			if moveInput.UserInputType == Enum.UserInputType.MouseMovement and dragToggle then
+				local delta = moveInput.Position - dragStart
+				InfoPopup.Position = UDim2.new(startPos.X.Scale, startPos.X.Offset + delta.X, startPos.Y.Scale, startPos.Y.Offset + delta.Y)
+			end
+		end)
+		
+		UserInputService.InputEnded:Connect(function(endInput)
+			if endInput.UserInputType == Enum.UserInputType.MouseButton1 then
+				dragToggle = false
+				if connection then
+					connection:Disconnect()
+				end
+			end
+		end)
+	end
+end)
+
+UpdateMaxTime(MaxAFKTime)
+UpdateTime()
+SetupSlider()
+SetupDragging()
+SetupLoadingAnimation()
+SelectMethod("Hybrid")
+
+MainFrame.Parent = ScreenGui
+
+UserInputService.InputBegan:Connect(function(input)
+	if AFKEnabled then
+		LastActivity = os.time()
+	end
+end)
+
+print("=========================================")
+print("     ANTI-AFK SYSTEM ĐÃ KHỞI ĐỘNG")
+print("=========================================")
+print("Phương pháp mặc định: Hybrid")
+print("Thời gian chờ: " .. MaxAFKTime .. " giây")
+print("Nhấn nút ? để xem thông tin chi tiết")
+print("=========================================")
